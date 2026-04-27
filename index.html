@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Valto Capital — Sistema de Pagos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a18;}
+.app{display:flex;min-height:100vh;}
+.sidebar{width:210px;min-width:210px;background:#0a1628;padding:0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.s-logo{padding:18px 16px 16px;border-bottom:0.5px solid rgba(255,255,255,0.08);margin-bottom:6px;}
+.s-logo-title{font-size:16px;font-weight:700;color:#fff;letter-spacing:-.3px;}
+.s-logo-sub{font-size:10px;color:rgba(255,255,255,.4);margin-top:2px;text-transform:uppercase;letter-spacing:.08em;}
+.s-title{font-size:10px;font-weight:700;color:rgba(255,255,255,.3);padding:10px 16px 3px;letter-spacing:.07em;text-transform:uppercase;}
+.nav{display:flex;align-items:center;gap:8px;padding:8px 16px;font-size:13px;color:rgba(255,255,255,.55);cursor:pointer;border-left:2px solid transparent;transition:all .12s;}
+.nav:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.9);}
+.nav.on{color:#fff;font-weight:600;border-left:2px solid #4d9fff;background:rgba(77,159,255,.12);}
+.nav.locked{opacity:.2;cursor:not-allowed;pointer-events:none;}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.5;flex-shrink:0;}
+.nbadge{margin-left:auto;background:#E24B4A;color:#fff;font-size:10px;padding:1px 7px;border-radius:99px;font-weight:700;}
+.main{flex:1;overflow-y:auto;padding:24px;max-width:calc(100vw - 210px);}
+.view{display:none;}.view.on{display:block;}
+h2{font-size:20px;font-weight:700;color:#1a1a18;margin-bottom:2px;}
+.sub{font-size:13px;color:#888780;margin-bottom:18px;}
+.card{background:#fff;border:0.5px solid rgba(0,0,0,0.09);border-radius:12px;padding:16px 20px;margin-bottom:14px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.metric{background:#f5f5f3;border-radius:8px;padding:14px 16px;}
+.ml{font-size:11px;color:#888780;margin-bottom:4px;}
+.mv{font-size:24px;font-weight:700;color:#1a1a18;}
+.ms{font-size:11px;color:#888780;margin-top:2px;}
+.lbl{display:block;font-size:11px;font-weight:700;color:#888780;margin-bottom:5px;letter-spacing:.02em;}
+.inp{width:100%;padding:8px 11px;font-size:13px;border:0.5px solid rgba(0,0,0,0.18);border-radius:8px;background:#fff;color:#1a1a18;font-family:inherit;transition:border-color .15s,box-shadow .15s;}
+.inp:focus{outline:none;border-color:#2d7dd2;box-shadow:0 0 0 2px rgba(45,125,210,.15);}
+.inp[readonly]{background:#f5f5f3;cursor:default;}
+select.inp{appearance:none;cursor:pointer;}
+textarea.inp{resize:vertical;min-height:70px;}
+.row{margin-bottom:12px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;font-size:13px;font-weight:600;border-radius:8px;border:0.5px solid rgba(0,0,0,0.14);background:#fff;color:#1a1a18;cursor:pointer;font-family:inherit;transition:all .12s;}
+.btn:hover{background:#f5f5f3;}
+.btn:active{transform:scale(.98);}
+.btn-p{background:#2d7dd2;color:#fff;border-color:#2d7dd2;}
+.btn-p:hover{background:#1a5fa3;}
+.btn-ok{background:#3B6D11;color:#fff;border-color:#3B6D11;}
+.btn-ok:hover{background:#27500A;}
+.btn-no{background:#A32D2D;color:#fff;border-color:#A32D2D;}
+.btn-sm{padding:5px 11px;font-size:12px;}
+.tag{display:inline-flex;align-items:center;font-size:11px;padding:2px 9px;border-radius:99px;font-weight:700;}
+.t-ok{background:#EAF3DE;color:#27500A;}
+.t-pend{background:#FAEEDA;color:#633806;}
+.t-no{background:#FCEBEB;color:#791F1F;}
+.t-sched{background:#E6F1FB;color:#0C447C;}
+.t-paid{background:#e8e8e6;color:#444441;}
+.table{width:100%;border-collapse:collapse;font-size:13px;}
+.table th{text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#888780;border-bottom:0.5px solid rgba(0,0,0,0.07);text-transform:uppercase;letter-spacing:.05em;}
+.table td{padding:10px 12px;border-bottom:0.5px solid rgba(0,0,0,0.05);color:#1a1a18;vertical-align:middle;}
+.table tr:last-child td{border-bottom:none;}
+.table tr:hover td{background:#fafaf8;}
+.upload-zone{border:1.5px dashed rgba(0,0,0,0.18);border-radius:8px;padding:24px;text-align:center;color:#888780;font-size:13px;cursor:pointer;transition:all .15s;user-select:none;}
+.upload-zone:hover,.upload-zone.drag{border-color:#2d7dd2;color:#2d7dd2;background:rgba(45,125,210,.04);}
+.ai-banner{background:#E6F1FB;border:0.5px solid #B5D4F4;border-radius:8px;padding:10px 14px;font-size:12px;color:#0C447C;display:flex;align-items:center;gap:9px;margin-bottom:12px;}
+.ai-ok{background:#EAF3DE;border-color:#C0DD97;color:#27500A;}
+.loading-bar{height:3px;background:#E6F1FB;border-radius:99px;overflow:hidden;margin:4px 0 12px;}
+.loading-fill{height:100%;background:#2d7dd2;border-radius:99px;width:0%;transition:width .35s;}
+.verify-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,0.05);font-size:13px;}
+.verify-row:last-child{border-bottom:none;}
+.vicon{width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;font-weight:700;}
+.v-ok{background:#EAF3DE;color:#3B6D11;}
+.v-warn{background:#FAEEDA;color:#854F0B;}
+.v-err{background:#FCEBEB;color:#A32D2D;}
+.chip{display:inline-flex;align-items:center;padding:2px 9px;border-radius:99px;font-size:11px;background:#f5f5f3;color:#888780;border:0.5px solid rgba(0,0,0,0.09);}
+.sig-box{border:0.5px solid rgba(0,0,0,0.09);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-top:10px;background:#fafaf8;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-head{font-size:11px;font-weight:700;color:#888780;text-align:center;padding:4px 0;}
+.cal-day{min-height:60px;border:0.5px solid rgba(0,0,0,0.07);border-radius:8px;padding:5px 6px;background:#fff;}
+.cal-day.today{border-color:#2d7dd2;background:#EEF5FF;}
+.cal-day .dn{font-size:12px;font-weight:700;color:#1a1a18;margin-bottom:3px;}
+.cal-day.today .dn{color:#2d7dd2;}
+.cal-day.empty{opacity:.2;background:#fafaf8;}
+.cal-pill{font-size:10px;padding:2px 6px;border-radius:99px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
+.cal-pill:hover{opacity:.75;}
+.cp-mxn{background:#EAF3DE;color:#27500A;}
+.cp-usd{background:#E6F1FB;color:#0C447C;}
+.cp-paid{background:#e8e8e6;color:#444441;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
+.modal{background:#fff;border-radius:16px;padding:24px;width:100%;max-width:620px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.25);}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:16px;}
+.tab-bar{display:flex;gap:2px;margin-bottom:14px;background:#f5f5f3;border-radius:8px;padding:3px;}
+.tab{flex:1;text-align:center;padding:6px 8px;font-size:12px;border-radius:6px;cursor:pointer;color:#888780;font-weight:600;transition:all .12s;}
+.tab.on{background:#fff;color:#1a1a18;box-shadow:0 1px 4px rgba(0,0,0,.09);}
+.file-viewer{background:#f5f5f3;border-radius:8px;padding:24px;text-align:center;min-height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;}
+.file-icon{width:48px;height:56px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
+.fi-pdf{background:#FCEBEB;color:#791F1F;border:0.5px solid #F7C1C1;}
+.fi-xml{background:#EAF3DE;color:#27500A;border:0.5px solid #C0DD97;}
+.fi-comp{background:#E6F1FB;color:#0C447C;border:0.5px solid #B5D4F4;}
+.tl-item{display:flex;gap:10px;padding-bottom:14px;position:relative;}
+.tl-item:last-child{padding-bottom:0;}
+.tl-dot{width:10px;height:10px;border-radius:50%;margin-top:3px;flex-shrink:0;}
+.tl-line{position:absolute;left:4.5px;top:14px;bottom:0;width:1px;background:rgba(0,0,0,0.09);}
+.tl-item:last-child .tl-line{display:none;}
+.comment-box{background:#fafaf8;border-radius:8px;padding:10px 14px;}
+.comment-item{display:flex;gap:9px;padding:8px 0;border-bottom:0.5px solid rgba(0,0,0,0.05);}
+.comment-item:last-child{border-bottom:none;}
+.avatar-sm{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.comment-note{background:#FAEEDA;border:0.5px solid #FAC775;border-radius:6px;padding:4px 10px;font-size:12px;color:#412402;display:inline-flex;align-items:center;gap:5px;}
+.perm-check{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;}
+.perm-on{width:16px;height:16px;border-radius:50%;background:#3B6D11;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.perm-off{width:16px;height:16px;border-radius:50%;background:#f0f0ee;border:0.5px solid rgba(0,0,0,0.15);flex-shrink:0;}
+.role-card{border:0.5px solid rgba(0,0,0,0.09);border-radius:12px;padding:16px 18px;background:#fff;}
+.role-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.role-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;}
+.access-denied{background:#fff;border:0.5px solid rgba(0,0,0,0.09);border-radius:12px;padding:48px;text-align:center;}
+.empty-state{text-align:center;padding:36px 20px;color:#888780;}
+.empty-state .ei{font-size:36px;opacity:.2;margin-bottom:10px;}
+.user-panel{padding:14px 16px;border-top:0.5px solid rgba(255,255,255,.08);margin-top:auto;}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="sidebar">
+  <div class="s-logo">
+    <div class="s-logo-title">Valto Capital</div>
+    <div class="s-logo-sub">Sistema de Pagos</div>
+  </div>
+  <div class="s-title">Módulos</div>
+  <div class="nav on"  onclick="sv('dashboard')">      <span class="dot"></span>Dashboard</div>
+  <div class="nav" id="nav-captura">                   <span class="dot"></span>Nueva factura</div>
+  <div class="nav" id="nav-aprobacion">                <span class="dot"></span>Aprobaciones<span class="nbadge" id="badge-apr" style="display:none">0</span></div>
+  <div class="nav" id="nav-pagos">                     <span class="dot"></span>Programar pagos</div>
+  <div class="nav"     onclick="sv('calendario')">     <span class="dot"></span>Calendario</div>
+  <div class="nav" id="nav-comprobantes">              <span class="dot"></span>Comprobantes</div>
+  <div class="nav"     onclick="sv('proveedores')">    <span class="dot"></span>Proveedores</div>
+  <div class="nav" id="nav-usuarios">                  <span class="dot"></span>Usuarios</div>
+  <div style="flex:1"></div>
+  <div class="user-panel">
+    <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Sesión activa</div>
+    <select id="userSel" onchange="changeUser()" style="width:100%;padding:6px 9px;font-size:12px;border-radius:7px;border:0.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font-family:inherit;cursor:pointer;appearance:none;">
+      <option value="0">Marcelo Garza — Admin</option>
+      <option value="1">Emanuel Gonzalez — Director</option>
+      <option value="2">David Gonzalez — Tesorero</option>
+    </select>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- DASHBOARD -->
+<div id="v-dashboard" class="view on">
+  <h2>Dashboard</h2><p class="sub">Valto Capital — resumen de pagos a proveedores</p>
+  <div class="g4">
+    <div class="metric"><div class="ml">Total por pagar</div><div class="mv" id="dm-total">$0</div><div class="ms">MXN + USD</div></div>
+    <div class="metric"><div class="ml">Facturas activas</div><div class="mv" id="dm-count">0</div><div class="ms">en el sistema</div></div>
+    <div class="metric"><div class="ml">Por aprobar</div><div class="mv" id="dm-apr">0</div><div class="ms">requieren visto bueno</div></div>
+    <div class="metric"><div class="ml">Pagadas este mes</div><div class="mv" id="dm-paid">0</div><div class="ms">facturas completadas</div></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <span style="font-size:14px;font-weight:700;">Facturas recientes</span>
+      <button class="btn btn-sm btn-p" id="dash-nueva" onclick="sv('captura')">+ Nueva factura</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="table">
+        <thead><tr><th>Proveedor</th><th>Folio</th><th>Monto</th><th>Moneda</th><th>Pago solicitado</th><th>Comentario</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="dash-table"><tr><td colspan="8"><div class="empty-state"><div class="ei">📋</div>Aún no hay facturas</div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:14px;">Gastos por categoría</div><div style="position:relative;height:180px;"><canvas id="chartCat"></canvas></div><div id="chart-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:12px;color:#888780;"></div></div>
+    <div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:14px;">Por estado</div><div style="position:relative;height:180px;"><canvas id="chartStatus"></canvas></div><div id="status-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:12px;color:#888780;"></div></div>
+  </div>
+</div>
+
+<!-- CAPTURA -->
+<div id="v-captura" class="view">
+  <h2>Nueva factura</h2><p class="sub">Sube tu XML y PDF — Claude extrae todo automáticamente</p>
+  <input type="file" id="input-xml" accept=".xml" style="display:none" onchange="handleFile('xml',this.files[0])">
+  <input type="file" id="input-pdf" accept=".pdf" style="display:none" onchange="handleFile('pdf',this.files[0])">
+  <div id="step-upload">
+    <div class="g2">
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px;">1. XML del CFDI</div>
+        <div class="upload-zone" id="uz-xml" onclick="document.getElementById('input-xml').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="onDrop(event,'xml')">
+          <div style="font-size:28px;opacity:.3;margin-bottom:8px;">↑</div>
+          <div style="font-weight:700;margin-bottom:3px;">Arrastra tu XML aquí</div>
+          <div style="font-size:11px;opacity:.7;">o haz clic para seleccionar · .xml</div>
+        </div>
+        <div id="xml-ok" style="display:none;margin-top:10px;" class="ai-banner ai-ok"></div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px;">2. PDF de la factura</div>
+        <div class="upload-zone" id="uz-pdf" onclick="document.getElementById('input-pdf').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="onDrop(event,'pdf')">
+          <div style="font-size:28px;opacity:.3;margin-bottom:8px;">↑</div>
+          <div style="font-weight:700;margin-bottom:3px;">Arrastra tu PDF aquí</div>
+          <div style="font-size:11px;opacity:.7;">o haz clic para seleccionar · .pdf</div>
+        </div>
+        <div id="pdf-ok" style="display:none;margin-top:10px;" class="ai-banner ai-ok"></div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:6px;">
+      <button class="btn btn-p" id="btn-analizar" onclick="analizarIA()" disabled style="opacity:.4;font-size:14px;padding:10px 24px;">Analizar con IA</button>
+    </div>
+  </div>
+  <div id="step-ai" style="display:none;">
+    <div class="ai-banner"><div style="width:18px;height:18px;border-radius:50%;background:#2d7dd2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">IA</div><span id="ai-msg">Leyendo tus archivos...</span></div>
+    <div class="loading-bar"><div class="loading-fill" id="ai-bar"></div></div>
+  </div>
+  <div id="step-result" style="display:none;">
+    <div class="ai-banner ai-ok"><div style="width:18px;height:18px;border-radius:50%;background:#3B6D11;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">✓</div><span>Datos extraídos — completa los campos requeridos abajo</span></div>
+    <div class="g2">
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;">Datos del proveedor <span class="chip" style="margin-left:6px;">IA</span></div>
+        <div class="row"><label class="lbl">Razón social</label><input class="inp" id="f-razon" readonly></div>
+        <div class="g2" style="gap:10px;"><div class="row"><label class="lbl">RFC</label><input class="inp" id="f-rfc" readonly></div><div class="row"><label class="lbl">Régimen</label><input class="inp" id="f-reg" readonly></div></div>
+        <div class="row"><label class="lbl">Domicilio</label><input class="inp" id="f-dom" readonly></div>
+        <div class="row"><label class="lbl">Correo</label><input class="inp" id="f-email" readonly></div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;">Datos de la factura <span class="chip" style="margin-left:6px;">IA</span></div>
+        <div class="g2" style="gap:10px;"><div class="row"><label class="lbl">UUID</label><input class="inp" id="f-uuid" readonly style="font-family:monospace;font-size:11px;"></div><div class="row"><label class="lbl">Fecha emisión</label><input class="inp" id="f-fecha" readonly></div></div>
+        <div class="g3"><div class="row"><label class="lbl">Subtotal</label><input class="inp" id="f-sub" readonly></div><div class="row"><label class="lbl">IVA</label><input class="inp" id="f-iva" readonly></div><div class="row"><label class="lbl">Total</label><input class="inp" id="f-tot" readonly style="font-weight:700;"></div></div>
+        <div class="g2" style="gap:10px;"><div class="row"><label class="lbl">Moneda</label><input class="inp" id="f-mon" readonly></div><div class="row"><label class="lbl">Método pago</label><input class="inp" id="f-met" readonly></div></div>
+        <div class="row"><label class="lbl">Concepto</label><input class="inp" id="f-con" readonly></div>
+      </div>
+    </div>
+    <div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:12px;">Verificación SAT</div><div id="verify-list"></div></div>
+    <div class="card" style="border:1.5px solid #B5D4F4;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#0C447C;">Tu captura requerida</div>
+      <div style="font-size:12px;color:#888780;margin-bottom:16px;">Solo estos campos — todo lo demás ya lo hizo la IA</div>
+      <div class="g2">
+        <div>
+          <div class="row"><label class="lbl" style="color:#2d7dd2;">Proveedor *</label><select class="inp" id="f-prov-sel" style="border-color:#2d7dd2;"><option value="">— Selecciona —</option><option>Levar Asesores</option><option>IDesk</option><option>Syscap</option><option>Yuinius</option><option>Otro</option></select></div>
+          <div class="row"><label class="lbl" style="color:#2d7dd2;">Fecha de pago solicitada *</label><input class="inp" type="date" id="f-fechapago" style="border-color:#2d7dd2;"></div>
+          <div class="row"><label class="lbl">Categoría</label><select class="inp" id="f-cat"><option>Sistemas y tecnología</option><option>Asesoría y consultoría</option><option>Suscripciones</option><option>Servicios profesionales</option><option>Infraestructura</option><option>Otros</option></select></div>
+          <div class="row"><label class="lbl">Moneda</label><select class="inp" id="f-moneda-sel"><option value="MXN">MXN</option><option value="USD">USD</option></select></div>
+        </div>
+        <div>
+          <div class="row"><label class="lbl" style="color:#2d7dd2;">Monto total *</label><input class="inp" type="number" id="f-monto" placeholder="0.00" style="border-color:#2d7dd2;"></div>
+          <div class="row"><label class="lbl">Folio / No. factura</label><input class="inp" id="f-folio" placeholder="Ej: INV-001"></div>
+          <div class="row"><label class="lbl" style="color:#2d7dd2;">Comentario interno (opcional)</label><textarea class="inp" id="f-comentario" placeholder="Ej: Pago mensual plataforma, reembolso para Marcelo..." style="border-color:#2d7dd2;"></textarea><div style="font-size:11px;color:#888780;margin-top:3px;">Visible para todos los roles</div></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:6px;"><button class="btn" onclick="resetCap()">Cancelar</button><button class="btn btn-p" onclick="guardarFactura()">Enviar a aprobación →</button></div>
+    </div>
+  </div>
+  <div id="step-manual" style="display:none;">
+    <div class="card" style="border:1.5px solid #B5D4F4;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#0C447C;">Captura manual</div>
+      <div style="font-size:12px;color:#888780;margin-bottom:16px;">Llena los datos sin subir archivos</div>
+      <div class="g2">
+        <div>
+          <div class="row"><label class="lbl">Proveedor *</label><select class="inp" id="m-prov"><option value="">— Selecciona —</option><option>Levar Asesores</option><option>IDesk</option><option>Syscap</option><option>Yuinius</option><option>Otro</option></select></div>
+          <div class="row"><label class="lbl">Folio</label><input class="inp" id="m-folio" placeholder="INV-001"></div>
+          <div class="row"><label class="lbl">Monto *</label><input class="inp" type="number" id="m-monto" placeholder="0.00"></div>
+          <div class="row"><label class="lbl">Moneda</label><select class="inp" id="m-moneda"><option value="MXN">MXN</option><option value="USD">USD</option></select></div>
+        </div>
+        <div>
+          <div class="row"><label class="lbl">Categoría</label><select class="inp" id="m-cat"><option>Sistemas y tecnología</option><option>Asesoría y consultoría</option><option>Suscripciones</option><option>Servicios profesionales</option><option>Infraestructura</option><option>Otros</option></select></div>
+          <div class="row"><label class="lbl">Fecha de pago *</label><input class="inp" type="date" id="m-fecha"></div>
+          <div class="row"><label class="lbl">Comentario</label><textarea class="inp" id="m-comentario" placeholder="Descripción o nota interna..."></textarea></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:9px;"><button class="btn" onclick="toggleManual()">Cancelar</button><button class="btn btn-p" onclick="guardarManual()">Enviar a aprobación →</button></div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:10px;"><button class="btn btn-sm" id="btn-manual" onclick="toggleManual()" style="font-size:12px;color:#888780;">O capturar manualmente sin subir archivos</button></div>
+</div>
+
+<!-- APROBACIONES -->
+<div id="v-aprobacion" class="view">
+  <h2>Aprobaciones pendientes</h2><p class="sub">Tu nombre y fecha quedan registrados en cada visto bueno</p>
+  <div id="apr-banner" class="ai-banner" style="background:#EAF3DE;border-color:#C0DD97;color:#27500A;"></div>
+  <div id="apr-list"></div>
+</div>
+
+<!-- PROGRAMAR PAGOS -->
+<div id="v-pagos" class="view">
+  <h2>Programar pagos</h2><p class="sub">Facturas aprobadas listas para calendarizar</p>
+  <div class="g4" style="margin-bottom:18px;">
+    <div class="metric"><div class="ml">Por programar</div><div class="mv" id="pg-count">0</div><div class="ms">facturas</div></div>
+    <div class="metric"><div class="ml">Total MXN</div><div class="mv" id="pg-mxn">$0</div><div class="ms">pendiente</div></div>
+    <div class="metric"><div class="ml">Total USD</div><div class="mv" id="pg-usd">$0</div><div class="ms">pendiente</div></div>
+    <div class="metric"><div class="ml">Tipo de cambio</div><div class="mv">$17.42</div><div class="ms">MXN/USD ref.</div></div>
+  </div>
+  <div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:12px;">Facturas aprobadas</div><div id="pagos-list"></div></div>
+</div>
+
+<!-- CALENDARIO -->
+<div id="v-calendario" class="view">
+  <h2>Calendario de pagos</h2><p class="sub">Haz clic en cualquier pago para ver detalle, PDF, XML y comprobante</p>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="btn btn-sm" onclick="chMon(-1)">← Anterior</button>
+      <span style="font-size:16px;font-weight:700;" id="cal-title"></span>
+      <button class="btn btn-sm" onclick="chMon(1)">Siguiente →</button>
+    </div>
+    <div style="display:flex;gap:12px;font-size:12px;align-items:center;">
+      <span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:2px;background:#EAF3DE;border:0.5px solid #C0DD97;"></span>MXN</span>
+      <span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:2px;background:#E6F1FB;border:0.5px solid #B5D4F4;"></span>USD</span>
+      <span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:2px;background:#e8e8e6;border:0.5px solid #ccc;"></span>Pagado</span>
+    </div>
+  </div>
+  <div class="card" style="padding:14px;">
+    <div class="cal-grid" style="margin-bottom:6px;"><div class="cal-head">Dom</div><div class="cal-head">Lun</div><div class="cal-head">Mar</div><div class="cal-head">Mié</div><div class="cal-head">Jue</div><div class="cal-head">Vie</div><div class="cal-head">Sáb</div></div>
+    <div class="cal-grid" id="cal-body"></div>
+  </div>
+  <div class="g3">
+    <div class="metric"><div class="ml">Total MXN este mes</div><div class="mv" id="sum-mxn">$0</div></div>
+    <div class="metric"><div class="ml">Total USD este mes</div><div class="mv" id="sum-usd">$0</div></div>
+    <div class="metric"><div class="ml">Pagos en el mes</div><div class="mv" id="sum-cnt">0</div></div>
+  </div>
+</div>
+
+<!-- COMPROBANTES -->
+<div id="v-comprobantes" class="view">
+  <h2>Comprobantes de pago</h2><p class="sub">Sube el comprobante — la factura cambia a Pagada automáticamente</p>
+  <div class="g2">
+    <div class="card">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Subir comprobante</div>
+      <div class="row"><label class="lbl">Factura a liquidar *</label><select class="inp" id="comp-factura-sel"><option value="">— Selecciona factura programada —</option></select></div>
+      <div class="row"><label class="lbl">Fecha del pago *</label><input class="inp" type="date" id="comp-fecha"></div>
+      <div class="row"><label class="lbl">Referencia / No. operación *</label><input class="inp" id="comp-ref" placeholder="Folio SPEI, Wire Transfer, etc."></div>
+      <div class="upload-zone" onclick="alert('En producción con backend: aquí subes el archivo')" style="margin-bottom:12px;"><div style="font-size:22px;opacity:.3;margin-bottom:6px;">↑</div><div style="font-weight:700;margin-bottom:3px;">Comprobante bancario</div><div style="font-size:11px;opacity:.7;">PDF, PNG o JPG</div></div>
+      <div class="row"><label class="lbl">Comentario (opcional)</label><textarea class="inp" id="comp-comentario" placeholder="Ej: Pago parcial, retención aplicada..."></textarea></div>
+      <div style="text-align:right;"><button class="btn btn-p" onclick="guardarComprobante()">Marcar como pagada ✓</button></div>
+    </div>
+    <div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:12px;">Facturas pagadas</div><div id="comp-list"><div class="empty-state"><div class="ei">📂</div>Sin comprobantes aún</div></div></div>
+  </div>
+</div>
+
+<!-- PROVEEDORES -->
+<div id="v-proveedores" class="view">
+  <h2>Proveedores</h2><p class="sub">Directorio de proveedores de Valto Capital</p>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <input class="inp" style="max-width:260px;" placeholder="Buscar..." oninput="filterProv(this.value)">
+    <button class="btn btn-sm btn-p" onclick="toggleProvForm()">+ Agregar proveedor</button>
+  </div>
+  <div id="prov-form" style="display:none;" class="card">
+    <div style="font-size:14px;font-weight:700;margin-bottom:12px;color:#0C447C;">Nuevo proveedor</div>
+    <div class="g2">
+      <div><div class="row"><label class="lbl">Nombre *</label><input class="inp" id="pv-nombre" placeholder="Nombre del proveedor"></div><div class="row"><label class="lbl">RFC o EIN</label><input class="inp" id="pv-rfc"></div><div class="row"><label class="lbl">Moneda</label><select class="inp" id="pv-moneda"><option value="MXN">MXN</option><option value="USD">USD</option></select></div></div>
+      <div><div class="row"><label class="lbl">CLABE / SWIFT</label><input class="inp" id="pv-clabe"></div><div class="row"><label class="lbl">Condiciones</label><select class="inp" id="pv-cond"><option>Contado</option><option>15 días</option><option>30 días</option><option>45 días</option><option>60 días</option></select></div><div class="row"><label class="lbl">Correo</label><input class="inp" id="pv-email" placeholder="pagos@proveedor.com"></div></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:9px;"><button class="btn" onclick="toggleProvForm()">Cancelar</button><button class="btn btn-p" onclick="agregarProveedor()">Guardar</button></div>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden;"><div style="overflow-x:auto;"><table class="table"><thead><tr><th>Proveedor</th><th>RFC/EIN</th><th>Moneda</th><th>CLABE/SWIFT</th><th>Condiciones</th><th>Correo</th><th>Estado</th><th></th></tr></thead><tbody id="prov-body"></tbody></table></div></div>
+</div>
+
+<!-- USUARIOS -->
+<div id="v-usuarios" class="view">
+  <h2>Gestión de usuarios</h2><p class="sub">Roles y accesos del sistema</p>
+  <div id="usuarios-content">
+    <div class="g3" style="margin-bottom:18px;">
+      <div class="role-card"><div class="role-header"><div class="role-avatar" style="background:#FCEBEB;color:#791F1F;">A</div><div><div style="font-size:14px;font-weight:700;">Administrador</div><div style="font-size:11px;color:#888780;">Acceso completo</div></div></div><div class="perm-check"><div class="perm-on"><span style="color:#fff;font-size:9px;">✓</span></div><span>Todo el sistema</span></div></div>
+      <div class="role-card"><div class="role-header"><div class="role-avatar" style="background:#EEEDFE;color:#3C3489;">D</div><div><div style="font-size:14px;font-weight:700;">Director</div><div style="font-size:11px;color:#888780;">Acceso completo</div></div></div><div class="perm-check"><div class="perm-on"><span style="color:#fff;font-size:9px;">✓</span></div><span>Todo el sistema</span></div></div>
+      <div class="role-card"><div class="role-header"><div class="role-avatar" style="background:#EAF3DE;color:#27500A;">T</div><div><div style="font-size:14px;font-weight:700;">Tesorero</div><div style="font-size:11px;color:#888780;">Opera pagos</div></div></div>
+        <div class="perm-check"><div class="perm-on"><span style="color:#fff;font-size:9px;">✓</span></div><span>Dashboard, calendario, proveedores</span></div>
+        <div class="perm-check"><div class="perm-on"><span style="color:#fff;font-size:9px;">✓</span></div><span>Captura y comprobantes</span></div>
+        <div class="perm-check"><div class="perm-off"></div><span style="color:#888780;">Aprobar pagos</span></div>
+        <div class="perm-check"><div class="perm-off"></div><span style="color:#888780;">Gestión de usuarios</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><span style="font-size:14px;font-weight:700;">Equipo Valto Capital</span><button class="btn btn-sm btn-p" onclick="showAddUser()">+ Agregar</button></div>
+      <div style="overflow-x:auto;"><table class="table"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Departamento</th><th></th></tr></thead><tbody id="users-body"></tbody></table></div>
+    </div>
+    <div id="add-user-form" style="display:none;" class="card">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px;color:#0C447C;">Agregar usuario</div>
+      <div class="g2"><div><div class="row"><label class="lbl">Nombre completo</label><input class="inp" id="nu-nombre" placeholder="Nombre Apellido"></div><div class="row"><label class="lbl">Correo</label><input class="inp" id="nu-email" placeholder="correo@empresa.com"></div></div><div><div class="row"><label class="lbl">Rol</label><select class="inp" id="nu-rol"><option value="admin">Administrador</option><option value="director">Director</option><option value="tesorero" selected>Tesorero</option></select></div><div class="row"><label class="lbl">Departamento</label><input class="inp" id="nu-dept" placeholder="Finanzas, Operaciones..."></div></div></div>
+      <div style="display:flex;justify-content:flex-end;gap:9px;"><button class="btn" onclick="document.getElementById('add-user-form').style.display='none'">Cancelar</button><button class="btn btn-p" onclick="addUser()">Agregar</button></div>
+    </div>
+  </div>
+  <div id="usuarios-locked" class="access-denied" style="display:none;"><div style="font-size:48px;opacity:.15;margin-bottom:14px;">🔒</div><div style="font-size:16px;font-weight:700;margin-bottom:6px;">Acceso restringido</div><div style="font-size:13px;color:#888780;">Solo Administrador y Director pueden gestionar usuarios.</div></div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MODAL DETALLE — z-index 9999, funciona desde calendario y dashboard -->
+<div id="pay-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 id="pm-title">Detalle del pago</h3>
+      <button class="btn btn-sm" onclick="closeModal()">✕ Cerrar</button>
+    </div>
+    <div id="pm-info" style="background:#fafaf8;border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:14px;"></div>
+    <div id="pm-comment" style="display:none;margin-bottom:14px;"></div>
+    <div class="tab-bar">
+      <div class="tab on"  id="tab-btn-pdf"  onclick="showTab('pdf')">PDF Factura</div>
+      <div class="tab"     id="tab-btn-xml"  onclick="showTab('xml')">XML CFDI</div>
+      <div class="tab"     id="tab-btn-comp" onclick="showTab('comp')">Comprobante</div>
+    </div>
+    <div id="tab-pdf" class="file-viewer"><div class="file-icon fi-pdf">PDF</div><div style="font-size:14px;font-weight:700;" id="pm-pdf-name">factura.pdf</div><div style="font-size:12px;color:#888780;">Representación impresa del CFDI</div><button class="btn btn-sm btn-p" onclick="alert('En producción: abre visor PDF')">Abrir PDF</button></div>
+    <div id="tab-xml" class="file-viewer" style="display:none;"><div class="file-icon fi-xml">XML</div><div style="font-size:14px;font-weight:700;" id="pm-xml-name">factura.xml</div><div style="font-size:12px;color:#888780;">Archivo CFDI firmado por el SAT</div><div id="pm-uuid-disp" style="font-size:11px;font-family:monospace;background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:6px;padding:6px 10px;color:#888780;word-break:break-all;max-width:100%;"></div><button class="btn btn-sm btn-p" onclick="alert('En producción: descarga XML')">Descargar XML</button></div>
+    <div id="tab-comp" class="file-viewer" style="display:none;"></div>
+    <div id="pm-timeline" style="margin-top:16px;"></div>
+  </div>
+</div>
+
+<script>
+const ROLES={
+  admin:   {label:'Administrador',can:['dashboard','captura','aprobacion','pagos','calendario','comprobantes','proveedores','usuarios']},
+  director:{label:'Director',     can:['dashboard','captura','aprobacion','pagos','calendario','comprobantes','proveedores','usuarios']},
+  tesorero:{label:'Tesorero',     can:['dashboard','captura','pagos','calendario','comprobantes','proveedores']}
+};
+const TEAM=[
+  {id:0,nombre:'Marcelo Garza',   email:'marcelo@valtocapital.com', rol:'admin',    dept:'Administración',initials:'MG',color:'#791F1F',bg:'#FCEBEB'},
+  {id:1,nombre:'Emanuel Gonzalez',email:'emanuel@valtocapital.com', rol:'director', dept:'Dirección',     initials:'EG',color:'#3C3489',bg:'#EEEDFE'},
+  {id:2,nombre:'David Gonzalez',  email:'david@valtocapital.com',   rol:'tesorero', dept:'Finanzas',      initials:'DG',color:'#27500A',bg:'#EAF3DE'},
+];
+let extraUsers=[], curIdx=0;
+let xmlFile=null, pdfFile=null, xmlB64='', pdfB64='';
+let calMonth=new Date().getMonth(), calYear=new Date().getFullYear();
+let facturas=[];
+let proveedores=[
+  {id:1,nombre:'Levar Asesores',rfc:'LEV200101AB0',moneda:'MXN',clabe:'012345678901234567',cond:'30 días',email:'pagos@levar.com',activo:true},
+  {id:2,nombre:'IDesk',         rfc:'IDE190505CD1',moneda:'MXN',clabe:'021900067890234512',cond:'Contado', email:'facturacion@idesk.mx',activo:true},
+  {id:3,nombre:'Syscap',        rfc:'SYS180303EF2',moneda:'MXN',clabe:'002010077123456789',cond:'15 días', email:'cobranza@syscap.com',activo:true},
+  {id:4,nombre:'Yuinius',       rfc:'YUI210707GH3',moneda:'USD',clabe:'SWIFT: BOFAUS3N',   cond:'Contado', email:'billing@yuinius.io',activo:true},
+];
+let chartCat=null, chartStatus=null;
+
+function cu(){return curIdx<TEAM.length?TEAM[curIdx]:extraUsers[curIdx-TEAM.length];}
+function hoy(){return new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});}
+function nextId(){return facturas.length>0?Math.max(...facturas.map(f=>f.id))+1:1;}
+function ini(n){return n.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();}
+function estadoTag(e){const m={pendiente:'<span class="tag t-pend">Pendiente</span>',aprobada:'<span class="tag t-ok">Aprobada</span>',programada:'<span class="tag t-sched">Programada</span>',pagada:'<span class="tag t-paid">Pagada</span>',rechazada:'<span class="tag t-no">Rechazada</span>'};return m[e]||`<span class="tag">${e}</span>`;}
+
+// NAV
+function sv(name){
+  const can=ROLES[cu().rol].can;
+  if(!can.includes(name)){showDenied(name);return;}
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.querySelectorAll('.nav').forEach(n=>n.classList.remove('on'));
+  document.getElementById('v-'+name).classList.add('on');
+  ['dashboard','captura','aprobacion','pagos','calendario','comprobantes','proveedores','usuarios'].forEach((id,i)=>{if(id===name){const n=document.querySelectorAll('.nav')[i];if(n)n.classList.add('on');}});
+  if(name==='aprobacion')renderAprobaciones();
+  if(name==='calendario')renderCal();
+  if(name==='usuarios')renderUsers();
+  if(name==='pagos')renderPagos();
+  if(name==='comprobantes')renderComprobantes();
+  if(name==='dashboard')renderDashboard();
+  if(name==='proveedores')renderProveedores();
+}
+function showDenied(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  let d=document.getElementById('v-denied');
+  if(!d){d=document.createElement('div');d.id='v-denied';document.querySelector('.main').appendChild(d);}
+  d.className='view on';
+  d.innerHTML=`<div class="access-denied"><div style="font-size:52px;opacity:.12;margin-bottom:16px;">🔒</div><div style="font-size:17px;font-weight:700;margin-bottom:6px;">Acceso restringido</div><div style="font-size:13px;color:#888780;">Tu rol (<strong>${ROLES[cu().rol].label}</strong>) no tiene acceso a este módulo.</div></div>`;
+}
+function applyNav(){
+  const can=ROLES[cu().rol].can;
+  [{id:'nav-captura',m:'captura'},{id:'nav-aprobacion',m:'aprobacion'},{id:'nav-pagos',m:'pagos'},{id:'nav-comprobantes',m:'comprobantes'},{id:'nav-usuarios',m:'usuarios'}].forEach(n=>{
+    const el=document.getElementById(n.id);if(!el)return;
+    if(can.includes(n.m)){el.classList.remove('locked');el.onclick=()=>sv(n.m);}
+    else{el.classList.add('locked');el.onclick=null;}
+  });
+  const db=document.getElementById('dash-nueva');if(db)db.style.display=can.includes('captura')?'':'none';
+  updBadge();
+}
+function changeUser(){curIdx=parseInt(document.getElementById('userSel').value);applyNav();const d=document.getElementById('v-denied');if(d)d.className='view';sv('dashboard');}
+function updBadge(){const n=facturas.filter(f=>f.estado==='pendiente').length;const b=document.getElementById('badge-apr');b.style.display=n>0?'':'none';b.textContent=n;}
+
+// DASHBOARD
+function renderDashboard(){
+  const tot=facturas.filter(f=>f.estado!=='pagada').reduce((s,f)=>s+(f.moneda==='MXN'?f.monto:f.monto*17.42),0);
+  document.getElementById('dm-total').textContent='$'+Math.round(tot).toLocaleString('es-MX');
+  document.getElementById('dm-count').textContent=facturas.length;
+  document.getElementById('dm-apr').textContent=facturas.filter(f=>f.estado==='pendiente').length;
+  document.getElementById('dm-paid').textContent=facturas.filter(f=>f.estado==='pagada').length;
+  const tb=document.getElementById('dash-table');
+  if(!facturas.length){tb.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="ei">📋</div>Aún no hay facturas</div></td></tr>`;renderCharts();return;}
+  tb.innerHTML=[...facturas].reverse().slice(0,10).map(f=>`<tr><td><div style="font-weight:700;">${f.proveedor}</div></td><td style="font-size:12px;color:#888780;">${f.folio||'—'}</td><td>$${f.monto.toLocaleString('es-MX')}</td><td><span class="chip">${f.moneda}</span></td><td style="font-size:12px;">${f.fechapago||'—'}</td><td>${f.comentario?`<span class="comment-note" style="font-size:11px;">📄 ${f.comentario.slice(0,25)}${f.comentario.length>25?'...':''}</span>`:'<span style="color:#ccc;font-size:12px;">—</span>'}</td><td>${estadoTag(f.estado)}</td><td><button class="btn btn-sm" onclick="openModal(${f.id})">Ver</button></td></tr>`).join('');
+  renderCharts();
+}
+function renderCharts(){
+  const cats={},est={pendiente:0,aprobada:0,programada:0,pagada:0,rechazada:0};
+  facturas.forEach(f=>{cats[f.categoria]=(cats[f.categoria]||0)+f.monto;est[f.estado]=(est[f.estado]||0)+1;});
+  const cc=['#2d7dd2','#1D9E75','#BA7517','#888780','#7F77DD','#D85A30'];
+  if(chartCat)chartCat.destroy();
+  const cl=Object.keys(cats),cd=Object.values(cats);
+  if(cl.length){chartCat=new Chart(document.getElementById('chartCat'),{type:'doughnut',data:{labels:cl,datasets:[{data:cd,backgroundColor:cc.slice(0,cl.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'65%'}});document.getElementById('chart-legend').innerHTML=cl.map((l,i)=>`<span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:2px;background:${cc[i]||'#ccc'};"></span>${l}</span>`).join('');}
+  if(chartStatus)chartStatus.destroy();
+  const sl=['Pendiente','Aprobada','Programada','Pagada','Rechazada'],sd=[est.pendiente,est.aprobada,est.programada,est.pagada,est.rechazada],sb=['#FAEEDA','#EAF3DE','#E6F1FB','#e8e8e6','#FCEBEB'];
+  if(facturas.length){chartStatus=new Chart(document.getElementById('chartStatus'),{type:'doughnut',data:{labels:sl,datasets:[{data:sd,backgroundColor:sb,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'60%'}});document.getElementById('status-legend').innerHTML=sl.map((l,i)=>`<span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:2px;background:${sb[i]};"></span>${l} (${sd[i]})</span>`).join('');}
+}
+
+// ARCHIVOS
+function onDrop(e,t){e.preventDefault();document.getElementById('uz-'+t).classList.remove('drag');if(e.dataTransfer.files[0])handleFile(t,e.dataTransfer.files[0]);}
+function handleFile(tipo,file){
+  if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(tipo==='xml'&&ext!=='xml'){alert('Por favor sube un archivo .xml');return;}
+  if(tipo==='pdf'&&ext!=='pdf'){alert('Por favor sube un archivo .pdf');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const b64=e.target.result.split(',')[1];
+    if(tipo==='xml'){xmlFile=file;xmlB64=b64;}else{pdfFile=file;pdfB64=b64;}
+    const kb=(file.size/1024).toFixed(1);
+    document.getElementById('uz-'+tipo).innerHTML=`<div style="font-weight:700;color:#3B6D11;font-size:14px;">✓ ${file.name}</div><div style="font-size:12px;color:#888780;margin-top:4px;">${kb} KB listo</div>`;
+    const ok=document.getElementById(tipo+'-ok');ok.style.display='flex';ok.textContent='✓ '+file.name+' cargado';
+    if(pdfFile){const b=document.getElementById('btn-analizar');b.disabled=false;b.style.opacity='1';}
+  };
+  reader.readAsDataURL(file);
+}
+
+// IA — LLAMA A /api/analizar (servidor Vercel)
+async function analizarIA(){
+  document.getElementById('step-upload').style.display='none';
+  document.getElementById('step-ai').style.display='block';
+  document.getElementById('btn-manual').style.display='none';
+  const setMsg=(m,p)=>{document.getElementById('ai-msg').textContent=m;document.getElementById('ai-bar').style.width=p+'%';};
+  setMsg('Preparando archivos...',10);
+  const parts=[];
+  if(xmlFile){try{const txt=atob(xmlB64);parts.push({type:'text',text:'XML del CFDI:\n```xml\n'+txt+'\n```'});}catch(e){}}
+  if(pdfFile){parts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfB64}});}
+  parts.push({type:'text',text:`Eres experto en facturas mexicanas CFDI. Analiza los archivos y devuelve SOLO JSON sin markdown ni texto extra:
+{"razon":"","rfc":"","regimen":"","domicilio":"","email":"","uuid":"","fecha_emision":"YYYY-MM-DD","subtotal":"$0.00","iva":"$0.00","total":"$0.00","moneda":"MXN","metodo_pago":"","concepto":"","verificaciones":[{"ok":true,"label":"","detalle":""}]}
+Incluye 5+ verificaciones relevantes. Si falta un dato pon "No disponible".`});
+  setMsg('Enviando a Claude...',30);
+  try{
+    const resp=await fetch('/api/analizar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:parts}]})});
+    setMsg('Procesando respuesta...',70);
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
+    const raw=data.content.map(c=>c.text||'').join('');
+    const p=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    setMsg('Llenando campos...',95);
+    await new Promise(r=>setTimeout(r,300));
+    document.getElementById('step-ai').style.display='none';
+    document.getElementById('step-result').style.display='block';
+    const map={razon:'f-razon',rfc:'f-rfc',regimen:'f-reg',domicilio:'f-dom',email:'f-email',uuid:'f-uuid',fecha_emision:'f-fecha',subtotal:'f-sub',iva:'f-iva',total:'f-tot',moneda:'f-mon',metodo_pago:'f-met',concepto:'f-con'};
+    Object.entries(map).forEach(([k,id])=>{const el=document.getElementById(id);if(el)el.value=p[k]||'';});
+    if(p.moneda==='USD')document.getElementById('f-moneda-sel').value='USD';
+    const tot=parseFloat((p.total||'').replace(/[$,]/g,''));if(tot)document.getElementById('f-monto').value=tot;
+    document.getElementById('verify-list').innerHTML=(p.verificaciones||[]).map(v=>{const vc=v.ok?'v-ok':'v-err',tc=v.ok?'t-ok':'t-no',sym=v.ok?'✓':'✗';return`<div class="verify-row"><div style="display:flex;align-items:center;gap:8px;"><div class="vicon ${vc}">${sym}</div><span>${v.label}</span></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:12px;color:#888780;">${v.detalle||''}</span><span class="tag ${tc}" style="font-size:10px;">${v.ok?'OK':'Error'}</span></div></div>`;}).join('')||'<div style="color:#888780;padding:10px 0;">Sin verificaciones.</div>';
+  }catch(err){
+    document.getElementById('step-ai').style.display='none';
+    document.getElementById('step-upload').style.display='block';
+    document.getElementById('btn-manual').style.display='block';
+    alert('Error al analizar: '+err.message+'\nPuedes capturar manualmente.');
+    console.error(err);
+  }
+}
+
+// RESET — limpia archivos completamente
+function resetCap(){
+  xmlFile=null;pdfFile=null;xmlB64='';pdfB64='';
+  try{document.getElementById('input-xml').value='';document.getElementById('input-pdf').value='';}catch(e){}
+  ['uz-xml','uz-pdf'].forEach((id,i)=>{document.getElementById(id).innerHTML=`<div style="font-size:28px;opacity:.3;margin-bottom:8px;">↑</div><div style="font-weight:700;margin-bottom:3px;">Arrastra tu ${i===0?'XML':'PDF'} aquí</div><div style="font-size:11px;opacity:.7;">o haz clic para seleccionar · .${i===0?'xml':'pdf'}</div>`;});
+  document.getElementById('xml-ok').style.display='none';
+  document.getElementById('pdf-ok').style.display='none';
+  document.getElementById('step-upload').style.display='block';
+  document.getElementById('step-result').style.display='none';
+  document.getElementById('step-ai').style.display='none';
+  document.getElementById('step-manual').style.display='none';
+  document.getElementById('btn-manual').style.display='block';
+  document.getElementById('btn-manual').textContent='O capturar manualmente sin subir archivos';
+  const b=document.getElementById('btn-analizar');b.disabled=true;b.style.opacity='.4';
+  ['f-prov-sel','f-moneda-sel','f-cat'].forEach(id=>{try{document.getElementById(id).selectedIndex=0;}catch(e){}});
+  ['f-folio','f-fechapago','f-monto','f-comentario'].forEach(id=>{try{document.getElementById(id).value='';}catch(e){}});
+}
+function toggleManual(){
+  const s=document.getElementById('step-manual'),u=document.getElementById('step-upload');
+  if(s.style.display==='none'){s.style.display='block';u.style.display='none';document.getElementById('btn-manual').textContent='Cancelar captura manual';}
+  else{s.style.display='none';u.style.display='block';document.getElementById('btn-manual').textContent='O capturar manualmente sin subir archivos';}
+}
+
+// GUARDAR
+function guardarFactura(){
+  const prov=document.getElementById('f-prov-sel').value,fp=document.getElementById('f-fechapago').value,monto=parseFloat(document.getElementById('f-monto').value)||0;
+  if(!prov||!fp||!monto){alert('Completa: proveedor, monto y fecha de pago');return;}
+  facturas.push({id:nextId(),proveedor:prov,folio:document.getElementById('f-folio').value||'',monto,moneda:document.getElementById('f-moneda-sel').value,categoria:document.getElementById('f-cat').value,fechapago:fp,comentario:document.getElementById('f-comentario').value,estado:'pendiente',capturadoPor:cu().nombre,capturadoFecha:hoy(),aprobadoPor:null,aprobadoFecha:null,programadoFecha:null,metodoPago:null,pagadoRef:null,pagadoFecha:null,compComentario:null,uuid:document.getElementById('f-uuid').value||null});
+  updBadge();resetCap();sv('dashboard');
+}
+function guardarManual(){
+  const prov=document.getElementById('m-prov').value,fp=document.getElementById('m-fecha').value,monto=parseFloat(document.getElementById('m-monto').value)||0;
+  if(!prov||!fp||!monto){alert('Completa: proveedor, monto y fecha');return;}
+  facturas.push({id:nextId(),proveedor:prov,folio:document.getElementById('m-folio').value||'',monto,moneda:document.getElementById('m-moneda').value,categoria:document.getElementById('m-cat').value,fechapago:fp,comentario:document.getElementById('m-comentario').value,estado:'pendiente',capturadoPor:cu().nombre,capturadoFecha:hoy(),aprobadoPor:null,aprobadoFecha:null,programadoFecha:null,metodoPago:null,pagadoRef:null,pagadoFecha:null,compComentario:null,uuid:null});
+  updBadge();toggleManual();sv('dashboard');
+}
+
+// APROBACIONES
+function renderAprobaciones(){
+  const u=cu();document.getElementById('apr-banner').innerHTML=`<div style="width:28px;height:28px;border-radius:50%;background:${u.bg};color:${u.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${u.initials}</div><span>Sesión: <strong>${u.nombre}</strong> — ${ROLES[u.rol].label}. Tu nombre quedará en cada aprobación.</span>`;
+  const pend=facturas.filter(f=>f.estado==='pendiente');
+  const el=document.getElementById('apr-list');
+  if(!pend.length){el.innerHTML=`<div class="empty-state"><div class="ei">✅</div>No hay facturas pendientes</div>`;return;}
+  el.innerHTML=pend.map(f=>`<div class="card" id="acard-${f.id}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><div><div style="font-size:15px;font-weight:700;">${f.proveedor}</div><div style="font-size:12px;color:#888780;margin-top:2px;">${f.folio||'Sin folio'} · ${f.categoria}</div></div><div style="text-align:right;"><div style="font-size:20px;font-weight:700;">$${f.monto.toLocaleString('es-MX')} <span style="font-size:12px;font-weight:400;color:#888780;">${f.moneda}</span></div><span id="atag-${f.id}" class="tag t-pend">Pendiente</span></div></div>
+    <div style="background:#fafaf8;border-radius:8px;padding:9px 13px;font-size:12px;margin-bottom:10px;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;"><div><span style="color:#888780;">Pago solicitado:</span> <strong>${f.fechapago}</strong></div><div><span style="color:#888780;">Categoría:</span> ${f.categoria}</div><div><span style="color:#888780;">Capturado por:</span> ${f.capturadoPor}</div><div><span style="color:#888780;">Fecha captura:</span> ${f.capturadoFecha}</div></div></div>
+    ${f.comentario?`<div class="comment-box" style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:#888780;margin-bottom:6px;">Comentario</div><div class="comment-item"><div class="avatar-sm" style="background:#EAF3DE;color:#27500A;">${ini(f.capturadoPor)}</div><div><div style="font-size:12px;font-weight:700;">${f.capturadoPor}</div><div style="font-size:13px;margin-top:2px;">${f.comentario}</div></div></div></div>`:''}
+    <div id="abtns-${f.id}" style="display:flex;justify-content:flex-end;gap:8px;"><button class="btn btn-sm btn-no" onclick="rechazarF(${f.id})">Rechazar</button><button class="btn btn-sm btn-ok" onclick="aprobarF(${f.id})">Aprobar y firmar ✓</button></div>
+    <div id="asig-${f.id}" style="display:none;"></div>
+  </div>`).join('');
+}
+function aprobarF(id){
+  const u=cu(),f=facturas.find(x=>x.id===id);f.estado='aprobada';f.aprobadoPor=u.nombre;f.aprobadoFecha=hoy();
+  document.getElementById(`atag-${id}`).className='tag t-ok';document.getElementById(`atag-${id}`).textContent='Aprobada';
+  document.getElementById(`abtns-${id}`).innerHTML=`<span style="font-size:13px;color:#3B6D11;font-weight:700;">✓ Aprobada</span>`;
+  const s=document.getElementById(`asig-${id}`);s.style.display='block';
+  s.innerHTML=`<div class="sig-box"><div style="width:30px;height:30px;border-radius:50%;background:${u.bg};color:${u.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">${u.initials}</div><div><div style="font-size:13px;font-weight:700;">${u.nombre}</div><div style="font-size:11px;color:#888780;">${ROLES[u.rol].label} · Aprobado el ${hoy()}</div></div><div style="margin-left:auto;"><span class="tag t-ok">Visto bueno registrado</span></div></div>`;
+  updBadge();renderDashboard();
+}
+function rechazarF(id){
+  const u=cu(),f=facturas.find(x=>x.id===id);f.estado='rechazada';
+  document.getElementById(`atag-${id}`).className='tag t-no';document.getElementById(`atag-${id}`).textContent='Rechazada';
+  document.getElementById(`abtns-${id}`).innerHTML=`<span style="font-size:13px;color:#A32D2D;font-weight:700;">✕ Rechazada</span>`;
+  const s=document.getElementById(`asig-${id}`);s.style.display='block';
+  s.innerHTML=`<div class="sig-box" style="border-color:#F09595;"><div style="width:30px;height:30px;border-radius:50%;background:#FCEBEB;color:#791F1F;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">${u.initials}</div><div><div style="font-size:13px;font-weight:700;">${u.nombre}</div><div style="font-size:11px;color:#888780;">${ROLES[u.rol].label} · Rechazada el ${hoy()}</div></div><div style="margin-left:auto;"><span class="tag t-no">Rechazo registrado</span></div></div>`;
+  updBadge();renderDashboard();
+}
+
+// PAGOS
+function renderPagos(){
+  const ap=facturas.filter(f=>f.estado==='aprobada');
+  document.getElementById('pg-count').textContent=ap.length;
+  document.getElementById('pg-mxn').textContent='$'+ap.filter(f=>f.moneda==='MXN').reduce((s,f)=>s+f.monto,0).toLocaleString('es-MX');
+  document.getElementById('pg-usd').textContent='$'+ap.filter(f=>f.moneda==='USD').reduce((s,f)=>s+f.monto,0).toLocaleString('es-MX');
+  const el=document.getElementById('pagos-list');
+  if(!ap.length){el.innerHTML=`<div class="empty-state"><div class="ei">📅</div>No hay facturas aprobadas pendientes</div>`;return;}
+  el.innerHTML=`<div style="overflow-x:auto;"><table class="table"><thead><tr><th>Proveedor</th><th>Monto</th><th>Moneda</th><th>Comentario</th><th>Solicitado</th><th>Fecha a pagar</th><th>Método</th><th></th></tr></thead><tbody>${ap.map(f=>`<tr><td><div style="font-weight:700;">${f.proveedor}</div><div style="font-size:11px;color:#888780;">${f.folio||'—'}</div></td><td>$${f.monto.toLocaleString('es-MX')}</td><td><span class="chip">${f.moneda}</span></td><td>${f.comentario?`<span class="comment-note" style="font-size:11px;">📄 ${f.comentario.slice(0,20)}${f.comentario.length>20?'...':''}</span>`:'<span style="color:#ccc;">—</span>'}</td><td style="font-size:12px;font-weight:600;">${f.fechapago}</td><td><input type="date" class="inp" id="pg-fecha-${f.id}" value="${f.fechapago}" style="width:138px;padding:5px 8px;font-size:12px;"></td><td><select class="inp" id="pg-met-${f.id}" style="width:120px;padding:5px 8px;font-size:12px;"><option>SPEI</option><option>Wire Transfer</option><option>Cheque</option><option>Efectivo</option></select></td><td><button class="btn btn-sm btn-p" id="pg-btn-${f.id}" onclick="programarPago(${f.id})">Programar</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+function programarPago(id){
+  const f=facturas.find(x=>x.id===id),fecha=document.getElementById(`pg-fecha-${id}`).value;
+  if(!fecha){alert('Selecciona la fecha de pago');return;}
+  f.estado='programada';f.programadoFecha=fecha;f.metodoPago=document.getElementById(`pg-met-${id}`).value;
+  const btn=document.getElementById(`pg-btn-${id}`);btn.textContent='✓ Programado';btn.disabled=true;btn.style.opacity='.5';
+  renderDashboard();renderCal();setTimeout(()=>renderPagos(),200);
+}
+
+// CALENDARIO
+function renderCal(){
+  const mn=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  document.getElementById('cal-title').textContent=mn[calMonth]+' '+calYear;
+  const fd=new Date(calYear,calMonth,1).getDay(),dim=new Date(calYear,calMonth+1,0).getDate(),today=new Date();
+  const pagos=facturas.filter(f=>{const d=f.programadoFecha||f.pagadoFecha;if(!d)return false;const dt=new Date(d+'T12:00:00');return dt.getMonth()===calMonth&&dt.getFullYear()===calYear;});
+  let html='';
+  for(let i=0;i<fd;i++)html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=dim;d++){
+    const it=d===today.getDate()&&calMonth===today.getMonth()&&calYear===today.getFullYear();
+    const dp=pagos.filter(f=>new Date((f.programadoFecha||f.pagadoFecha)+'T12:00:00').getDate()===d);
+    const pills=dp.map(f=>{const cls=f.estado==='pagada'?'cp-paid':f.moneda==='USD'?'cp-usd':'cp-mxn';return`<div class="cal-pill ${cls}" onclick="openModal(${f.id})" title="${f.proveedor}">${f.proveedor.split(' ')[0]} $${f.monto>=1000?(f.monto/1000).toFixed(0)+'K':f.monto}</div>`;}).join('');
+    html+=`<div class="cal-day${it?' today':''}"><div class="dn">${d}</div>${pills}</div>`;
+  }
+  document.getElementById('cal-body').innerHTML=html;
+  const mxn=pagos.filter(f=>f.moneda==='MXN').reduce((s,f)=>s+f.monto,0);
+  const usd=pagos.filter(f=>f.moneda==='USD').reduce((s,f)=>s+f.monto,0);
+  document.getElementById('sum-mxn').textContent='$'+mxn.toLocaleString('es-MX');
+  document.getElementById('sum-usd').textContent='$'+usd.toLocaleString('es-MX');
+  document.getElementById('sum-cnt').textContent=pagos.length;
+}
+function chMon(d){calMonth+=d;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}renderCal();closeModal();}
+
+// MODAL — FIXED: funciona desde calendario Y dashboard
+function openModal(id){
+  const f=facturas.find(x=>x.id===id);
+  if(!f)return;
+  document.getElementById('pm-title').textContent=f.proveedor+' — $'+f.monto.toLocaleString('es-MX')+' '+f.moneda;
+  document.getElementById('pm-info').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 20px;font-size:13px;">
+    <div><span style="color:#888780;">Proveedor:</span> ${f.proveedor}</div>
+    <div><span style="color:#888780;">Folio:</span> ${f.folio||'—'}</div>
+    <div><span style="color:#888780;">Monto:</span> $${f.monto.toLocaleString('es-MX')} ${f.moneda}</div>
+    <div><span style="color:#888780;">Categoría:</span> ${f.categoria}</div>
+    <div><span style="color:#888780;">Pago solicitado:</span> <strong>${f.fechapago||'—'}</strong></div>
+    <div><span style="color:#888780;">Estado:</span> ${estadoTag(f.estado)}</div>
+    ${f.aprobadoPor?`<div><span style="color:#888780;">Aprobó:</span> ${f.aprobadoPor}</div>`:''}
+    ${f.metodoPago?`<div><span style="color:#888780;">Método:</span> ${f.metodoPago}</div>`:''}
+    ${f.programadoFecha?`<div><span style="color:#888780;">Fecha programada:</span> ${f.programadoFecha}</div>`:''}
+    ${f.pagadoRef?`<div><span style="color:#888780;">Referencia:</span> ${f.pagadoRef}</div>`:''}
+  </div>`;
+  const pc=document.getElementById('pm-comment');
+  if(f.comentario){pc.style.display='block';pc.innerHTML=`<div class="comment-box"><div style="font-size:11px;font-weight:700;color:#888780;margin-bottom:6px;">Comentario interno</div><div class="comment-item"><div class="avatar-sm" style="background:#EAF3DE;color:#27500A;">${ini(f.capturadoPor)}</div><div><div style="font-size:12px;font-weight:700;">${f.capturadoPor}</div><div style="font-size:13px;margin-top:2px;">${f.comentario}</div></div></div></div>`;}
+  else pc.style.display='none';
+  document.getElementById('pm-pdf-name').textContent=(f.folio||'factura')+'.pdf';
+  document.getElementById('pm-xml-name').textContent=(f.folio||'factura')+'.xml';
+  document.getElementById('pm-uuid-disp').textContent='UUID: '+(f.uuid||'Disponible tras análisis con IA');
+  const tc=document.getElementById('tab-btn-comp'),cv=document.getElementById('tab-comp');
+  if(f.estado==='pagada'){tc.style.opacity='1';tc.style.pointerEvents='auto';tc.textContent='Comprobante';cv.innerHTML=`<div class="file-icon fi-comp">COMP</div><div style="font-size:14px;font-weight:700;">Comprobante de pago</div><div style="font-size:12px;color:#888780;">${f.metodoPago||''} · Ref: ${f.pagadoRef||'—'}</div><div style="font-size:12px;color:#888780;">Pagado el ${f.pagadoFecha||'—'}</div>${f.compComentario?`<div class="comment-note" style="font-size:12px;">📄 ${f.compComentario}</div>`:''}<button class="btn btn-sm btn-p" onclick="alert('En producción: descarga el comprobante')">Descargar</button>`;}
+  else{tc.style.opacity='.4';tc.style.pointerEvents='none';tc.textContent='Comprobante (pendiente)';cv.innerHTML=`<div style="font-size:13px;color:#888780;padding:20px;">Aún no se ha registrado el comprobante.</div>`;}
+  const steps=[{done:true,l:'Capturada',d:f.capturadoPor+' · '+f.capturadoFecha},{done:!!f.aprobadoPor,l:f.aprobadoPor?'Aprobada por '+f.aprobadoPor:'Pendiente de aprobación',d:f.aprobadoFecha||'En espera'},{done:!!f.programadoFecha||f.estado==='pagada',l:'Pago programado',d:f.programadoFecha||'Pendiente'},{done:f.estado==='pagada',l:'Pago realizado',d:f.estado==='pagada'?'Ref: '+(f.pagadoRef||'—'):'Pendiente'}];
+  document.getElementById('pm-timeline').innerHTML=`<div style="font-size:12px;font-weight:700;color:#888780;margin-bottom:9px;">Historial</div>${steps.map((s,i)=>`<div class="tl-item"><div class="tl-dot" style="background:${s.done?'#3B6D11':'#D3D1C7'};"></div>${i<steps.length-1?'<div class="tl-line"></div>':''}<div><div style="font-size:13px;font-weight:${s.done?700:400};color:${s.done?'#1a1a18':'#888780'};">${s.l}</div><div style="font-size:11px;color:#888780;margin-top:1px;">${s.d}</div></div></div>`).join('')}`;
+  showTab('pdf');
+  document.getElementById('pay-modal').style.display='flex';
+}
+function closeModal(){document.getElementById('pay-modal').style.display='none';}
+function showTab(t){
+  ['pdf','xml','comp'].forEach(id=>{
+    document.getElementById('tab-'+id).style.display=id===t?'flex':'none';
+    document.getElementById('tab-btn-'+id).classList.toggle('on',id===t);
+  });
+}
+
+// COMPROBANTES
+function renderComprobantes(){
+  const prog=facturas.filter(f=>f.estado==='programada');
+  const sel=document.getElementById('comp-factura-sel');
+  sel.innerHTML='<option value="">— Selecciona factura programada —</option>'+prog.map(f=>`<option value="${f.id}">${f.proveedor} · $${f.monto.toLocaleString('es-MX')} ${f.moneda} · ${f.programadoFecha}</option>`).join('');
+  const pagadas=facturas.filter(f=>f.estado==='pagada');
+  const el=document.getElementById('comp-list');
+  if(!pagadas.length){el.innerHTML=`<div class="empty-state"><div class="ei">📂</div>Sin comprobantes aún</div>`;return;}
+  el.innerHTML=pagadas.map(f=>`<div style="border:0.5px solid rgba(0,0,0,0.09);border-radius:10px;padding:12px 14px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px;"><div><div style="font-size:13px;font-weight:700;">${f.proveedor}</div><div style="font-size:11px;color:#888780;">${f.folio||'—'} · $${f.monto.toLocaleString('es-MX')} ${f.moneda}</div><div style="font-size:11px;color:#888780;">Pagado el ${f.pagadoFecha} · Ref: ${f.pagadoRef}</div></div><span class="tag t-paid">Pagada</span></div>${f.compComentario?`<div class="comment-note" style="font-size:11px;margin-bottom:8px;">📄 ${f.compComentario}</div>`:''}<button class="btn btn-sm" onclick="openModal(${f.id})">Ver detalle</button></div>`).join('');
+}
+function guardarComprobante(){
+  const sid=document.getElementById('comp-factura-sel').value,fecha=document.getElementById('comp-fecha').value,ref=document.getElementById('comp-ref').value.trim();
+  if(!sid){alert('Selecciona la factura a liquidar');return;}
+  if(!fecha){alert('Ingresa la fecha del pago');return;}
+  if(!ref){alert('Ingresa la referencia o número de operación');return;}
+  const f=facturas.find(x=>x.id===parseInt(sid));
+  f.estado='pagada';f.pagadoFecha=fecha;f.pagadoRef=ref;f.compComentario=document.getElementById('comp-comentario').value;
+  document.getElementById('comp-fecha').value='';document.getElementById('comp-ref').value='';document.getElementById('comp-comentario').value='';
+  renderComprobantes();renderDashboard();renderCal();
+  alert('✓ Comprobante registrado — factura marcada como Pagada');
+}
+
+// PROVEEDORES
+function renderProveedores(){
+  document.getElementById('prov-body').innerHTML=proveedores.filter(p=>p.activo).map(p=>`<tr><td><div style="font-weight:700;">${p.nombre}</div></td><td style="font-size:12px;color:#888780;">${p.rfc||'—'}</td><td><span class="chip">${p.moneda}</span></td><td style="font-size:11px;font-family:monospace;">${p.clabe||'—'}</td><td>${p.cond}</td><td style="font-size:12px;color:#888780;">${p.email||'—'}</td><td><span class="tag t-ok">Activo</span></td><td><button class="btn btn-sm" onclick="alert('Editar próximamente')">Editar</button></td></tr>`).join('');
+}
+function filterProv(q){document.querySelectorAll('#prov-body tr').forEach(r=>r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none');}
+function toggleProvForm(){const f=document.getElementById('prov-form');f.style.display=f.style.display==='none'?'block':'none';}
+function agregarProveedor(){
+  const nombre=document.getElementById('pv-nombre').value.trim();if(!nombre){alert('Ingresa el nombre');return;}
+  proveedores.push({id:Date.now(),nombre,rfc:document.getElementById('pv-rfc').value,moneda:document.getElementById('pv-moneda').value,clabe:document.getElementById('pv-clabe').value,cond:document.getElementById('pv-cond').value,email:document.getElementById('pv-email').value,activo:true});
+  ['pv-nombre','pv-rfc','pv-clabe','pv-email'].forEach(id=>document.getElementById(id).value='');
+  toggleProvForm();renderProveedores();
+  const opts='<option value="">— Selecciona —</option>'+proveedores.filter(p=>p.activo).map(p=>`<option>${p.nombre}</option>`).join('')+'<option>Otro</option>';
+  ['f-prov-sel','m-prov'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+}
+
+// USUARIOS
+function renderUsers(){
+  const ok=['admin','director'].includes(cu().rol);
+  document.getElementById('usuarios-content').style.display=ok?'block':'none';
+  document.getElementById('usuarios-locked').style.display=ok?'none':'block';
+  if(!ok)return;
+  const rl={admin:{label:'Administrador',bg:'#FCEBEB',c:'#791F1F'},director:{label:'Director',bg:'#EEEDFE',c:'#3C3489'},tesorero:{label:'Tesorero',bg:'#EAF3DE',c:'#27500A'}};
+  document.getElementById('users-body').innerHTML=[...TEAM,...extraUsers].map((u,idx)=>{const rc=rl[u.rol]||{label:u.rol,bg:'#f5f5f3',c:'#888780'};return`<tr><td><div style="display:flex;align-items:center;gap:9px;"><div style="width:30px;height:30px;border-radius:50%;background:${rc.bg};color:${rc.c};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">${u.initials||ini(u.nombre)}</div><div style="font-weight:700;">${u.nombre}</div></div></td><td style="font-size:12px;color:#888780;">${u.email}</td><td><span class="tag" style="background:${rc.bg};color:${rc.c};">${rc.label}</span></td><td style="font-size:12px;color:#888780;">${u.dept||'—'}</td><td>${idx>=TEAM.length?`<button class="btn btn-sm" style="color:#A32D2D;border-color:#F7C1C1;" onclick="removeUser(${u.id})">Quitar</button>`:''}</td></tr>`;}).join('');
+}
+function showAddUser(){document.getElementById('add-user-form').style.display='block';}
+function addUser(){
+  const nombre=document.getElementById('nu-nombre').value.trim(),email=document.getElementById('nu-email').value.trim();if(!nombre||!email){alert('Completa nombre y correo');return;}
+  const rol=document.getElementById('nu-rol').value,colors={admin:{color:'#791F1F',bg:'#FCEBEB'},director:{color:'#3C3489',bg:'#EEEDFE'},tesorero:{color:'#27500A',bg:'#EAF3DE'}};
+  extraUsers.push({id:Date.now(),nombre,email,rol,dept:document.getElementById('nu-dept').value||'—',initials:ini(nombre),...colors[rol]});
+  document.getElementById('add-user-form').style.display='none';
+  ['nu-nombre','nu-email','nu-dept'].forEach(id=>document.getElementById(id).value='');
+  const all=[...TEAM,...extraUsers];document.getElementById('userSel').innerHTML=all.map((u,i)=>`<option value="${i}">${u.nombre} — ${ROLES[u.rol].label}</option>`).join('');
+  renderUsers();
+}
+function removeUser(id){if(!confirm('¿Quitar este usuario?'))return;extraUsers=extraUsers.filter(u=>u.id!==id);renderUsers();}
+
+// INIT
+applyNav();renderDashboard();renderProveedores();
+</script>
+</body>
+</html>
