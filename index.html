@@ -517,11 +517,38 @@ async function analizarIA(){
   const setMsg=(m,p)=>{document.getElementById('ai-msg').textContent=m;document.getElementById('ai-bar').style.width=p+'%';};
   setMsg('Preparando archivos...',10);
   const parts=[];
-  if(xmlFile){try{const txt=atob(xmlB64);parts.push({type:'text',text:'XML del CFDI:\n```xml\n'+txt+'\n```'});}catch(e){}}
+  if(xmlFile){
+    try{
+      const bytes=Uint8Array.from(atob(xmlB64),c=>c.charCodeAt(0));
+      const txt=new TextDecoder('utf-8').decode(bytes);
+      parts.push({type:'text',text:'Contenido completo del XML CFDI:\n```xml\n'+txt+'\n```'});
+    }catch(e){console.warn('Error decodificando XML:',e);}
+  }
   if(pdfFile){parts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfB64}});}
-  parts.push({type:'text',text:`Eres experto en facturas mexicanas CFDI. Analiza los archivos y devuelve SOLO JSON sin markdown ni texto extra:
+  parts.push({type:'text',text:`Eres experto en facturas mexicanas CFDI del SAT. Analiza el XML y PDF adjuntos.
+
+Del XML extrae EXACTAMENTE estos campos tal como aparecen en el archivo:
+- Emisor: Nombre, RFC, RegimenFiscal
+- Domicilio del emisor si aparece
+- UUID del Complemento TimbreFiscalDigital
+- Fecha de emisión (atributo Fecha del nodo Comprobante)
+- SubTotal, Total, Moneda (atributos del nodo Comprobante)
+- IVA (nodo Impuestos/Traslados/Traslado atributo Importe)
+- MetodoPago y FormaPago del nodo Comprobante
+- Concepto: descripción del primer nodo Concepto (atributo Descripcion)
+- Email del emisor si aparece
+
+Devuelve ÚNICAMENTE este JSON sin markdown, sin explicaciones, sin texto extra antes o después:
 {"razon":"","rfc":"","regimen":"","domicilio":"","email":"","uuid":"","fecha_emision":"YYYY-MM-DD","subtotal":"$0.00","iva":"$0.00","total":"$0.00","moneda":"MXN","metodo_pago":"","concepto":"","verificaciones":[{"ok":true,"label":"","detalle":""}]}
-Incluye 5+ verificaciones relevantes. Si falta un dato pon "No disponible".`});
+
+Para las verificaciones incluye exactamente 5:
+1. Si el UUID tiene formato válido (ok:true/false)
+2. Si el RFC del emisor tiene formato válido mexicano (ok:true/false)
+3. Si el cálculo de IVA 16% es correcto (ok:true/false)
+4. Si la fecha de emisión es reciente menos de 90 días (ok:true o warn si es antigua)
+5. Si los datos del receptor aparecen en el XML (ok:true/false)
+
+Si algún dato no está en el XML pon exactamente "No disponible".`});
   setMsg('Enviando a Claude...',30);
   try{
     const resp=await fetch('/api/analizar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:parts}]})});
